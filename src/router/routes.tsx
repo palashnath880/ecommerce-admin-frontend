@@ -1,3 +1,4 @@
+import React from "react";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import ProtectedRoute from "./ProtectedRoute";
 import Login from "../pages/Login";
@@ -13,7 +14,11 @@ export default function Routes() {
   const { loading } = useContext(AuthContext);
 
   if (loading) {
-    return <Loader />;
+    return (
+      <div className="h-screen w-screen">
+        <Loader />
+      </div>
+    );
   }
 
   const router = createBrowserRouter([

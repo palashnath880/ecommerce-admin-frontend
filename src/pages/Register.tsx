@@ -9,6 +9,7 @@ import { useCookies } from "react-cookie";
 import PhoneInput from "../components/shared/PhoneInput";
 import { TiTick } from "react-icons/ti";
 import parsePhoneNumber from "libphonenumber-js";
+import { AxiosError } from "axios";
 
 const PasswordValidation = ({ data }: { data: PasswordValidationType }) => {
   const arr = [
@@ -97,15 +98,22 @@ export default function Register() {
       setError(""); // clear error
 
       const res = await authApi.register(data); // send register request
-      if (res.data.auth_token) {
+      if (res.data.token) {
         // set cookie with expiration time
-        setCookie("auth_token", res.data.auth_token, {
+        setCookie("auth_token", res.data.token, {
           expires: new Date(Date.now() + 3600000 * 7), //3600000 milliseconds = 1 day
         });
         window.location.pathname = "/";
       }
     } catch (err) {
-      setError(err.response.statusText);
+      interface ServerError {
+        message: string;
+      }
+
+      const error = err as AxiosError<ServerError>;
+      error?.response?.data?.message
+        ? setError(error?.response?.data?.message)
+        : setError(error?.response?.statusText);
     } finally {
       setSubmitting(false);
     }

@@ -3,14 +3,17 @@ import { SubmitHandler, useForm } from "react-hook-form";
 import TextInput from "../components/shared/TextInput";
 import { LoginForm } from "../types";
 import Button from "../components/shared/Button";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import authApi from "../api/authApi";
 import { useCookies } from "react-cookie";
+import { AxiosError } from "axios";
+import { parsePhoneNumber } from "libphonenumber-js";
 
 export default function Login() {
   // states
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
+  const [search] = useSearchParams();
 
   // react-cookie
   const [_cookies, setCookie] = useCookies(["auth_token"]);
@@ -25,16 +28,34 @@ export default function Login() {
       setSubmitting(true);
       setError(""); // clear error
 
+      // phone number check
+      const phoneNumber = parsePhoneNumber(data.user_login, "BD");
+      if (phoneNumber.isValid()) {
+        const formattedNumber = phoneNumber.formatNational(); // formatted number
+        data.user_login = formattedNumber;
+      }
+
       const res = await authApi.login(data); // send login request
-      if (res.data.auth_token) {
+      if (res.data.token) {
         // set cookie with expiration time
-        setCookie("auth_token", res.data.auth_token, {
+        setCookie("auth_token", res.data.token, {
           expires: new Date(Date.now() + 3600000 * 7), //3600000 milliseconds = 1 day
         });
-        window.location.pathname = "/";
+        if (search.get("redirect_url")) {
+          window.location.replace(search.get("redirect_url"));
+        } else {
+          window.location.pathname = "/";
+        }
       }
     } catch (err) {
-      setError(err.response.statusText);
+      interface ServerError {
+        message: string;
+      }
+
+      const error = err as AxiosError<ServerError>;
+      error?.response?.data?.message
+        ? setError(error?.response?.data?.message)
+        : setError(error?.response?.statusText);
     } finally {
       setSubmitting(false);
     }
